@@ -1,0 +1,261 @@
+import Foundation
+
+var checks = 0
+func check(_ value: @autoclosure () -> Bool, _ message: String) {
+    precondition(value(), message)
+    checks += 1
+}
+
+struct SeededRandom: RandomNumberGenerator {
+    var state: UInt64
+    mutating func next() -> UInt64 {
+        state = state &* 6364136223846793005 &+ 1442695040888963407
+        return state
+    }
+}
+
+var game = SnakeGame()
+let mid = game.rows / 2
+check(game.phase == .ready, "Starts ready")
+
+// Turning and input buffering
+game.reset(mode: .classic)
+game.turn(.left)
+game.step()
+check(game.snake[0] == Cell(x: 8, y: mid), "Cannot reverse")
+game.turn(.up)
+game.turn(.left)
+game.turn(.down)
+game.step()
+check(game.direction == .up, "First buffered turn")
+game.step()
+check(game.direction == .left, "Second buffered turn")
+game.pause()
+let paused = game.snake
+game.step()
+check(game.snake == paused, "Pause freezes game")
+game.resume()
+check(game.phase == .playing, "Resumes")
+
+// Eating, combo and walls
+game.reset(mode: .classic)
+var result = StepResult()
+for _ in 0..<5 { result = game.step() }
+check(result.ateApple && result.applePoints == 10, "Apple scores 10")
+check(game.score == 10 && game.snake.count == 5 && game.combo == 1, "Food grows snake and starts combo")
+check(!game.snake.contains(game.food), "Food spawns in free cell")
+for _ in 0..<30 where game.phase == .playing { game.step() }
+check(game.phase == .over, "Classic wall collision")
+
+// Combo grows on quick catches and resets on slow ones
+var random = SeededRandom(state: 7)
+game.reset(mode: .zen)
+var points: [Int] = []
+while game.apples < 3 && game.phase == .playing {
+    if let move = Autopilot.move(for: game) { game.turn(move) }
+    let step = game.step(using: &random)
+    if step.ateApple { points.append(step.applePoints) }
+}
+check(points == [10, 20, 30], "Quick catches build the combo: \(points)")
+game.reset(mode: .zen)
+for _ in 0..<5 { game.step() }
+for _ in 0..<40 { game.turn(.up); game.step(); game.turn(.right); game.step(); game.turn(.down); game.step(); game.turn(.right); game.step() }
+check(game.phase == .playing, "Zen run survives")
+
+// Wraparound and steady pace
+game.reset(mode: .arcade)
+game.turn(.up)
+for _ in 0..<(mid + 1) { game.step() }
+check(game.snake[0].y == game.rows - 1 && game.phase == .playing, "Arcade wraps")
+game.reset(mode: .zen)
+check(game.interval == 0.16, "Zen speed")
+game.turn(.up); game.step()
+game.turn(.left); game.step()
+game.turn(.down); game.step()
+check(game.phase == .playing, "Entering vacated tail allowed")
+game.reset(mode: .classic)
+for _ in 0..<5 { game.step() }
+game.turn(.up); game.step()
+game.turn(.left); game.step()
+game.turn(.down); game.step()
+check(game.phase == .over, "Body collision ends game")
+
+// Maze
+game.reset(mode: .maze)
+check(!game.obstacles.isEmpty && !game.obstacles.contains(game.food), "Maze has walls and a reachable apple")
+check(game.snake.allSatisfy { !game.obstacles.contains($0) }, "Maze start is clear")
+check((0..<game.columns).allSatisfy { !game.obstacles.contains(Cell(x: $0, y: mid)) }, "Starting row is open")
+game.turn(.up)
+for _ in 0..<12 where game.phase == .playing { game.step() }
+check(game.phase == .over, "Maze wall ends the round")
+
+// Level and speed
+game.reset(mode: .arcade)
+check(game.level == 1 && game.interval == 0.2, "Starts at level 1")
+
+// Clock
+var clock = GameClock()
+clock.advance(to: 10)
+check(clock.elapsed == 0, "First frame does not advance")
+clock.advance(to: 10.1)
+check(!clock.consume(interval: 0.2), "Fractional frame retained")
+clock.advance(to: 10.21)
+check(clock.consume(interval: 0.2), "Accumulated time produces tick")
+check(clock.elapsed < 0.011, "Remainder retained")
+clock.reset()
+clock.advance(to: 100)
+clock.advance(to: 500)
+check(clock.elapsed == 0.25, "Long stalls are bounded")
+clock.reset()
+clock.advance(to: 10)
+clock.advance(to: 9)
+check(clock.elapsed == 0, "Backward timestamps cannot subtract time")
+
+func ticks(at fps: Int) -> Int {
+    var clock = GameClock()
+    var count = 0
+    for frame in 0...fps * 10 {
+        clock.advance(to: Double(frame) / Double(fps))
+        while clock.consume(interval: 0.16) { count += 1 }
+    }
+    return count
+}
+check(Set([20, 30, 60, 120, 144].map(ticks)).count == 1, "Same rules across frame rates")
+
+game.reset(mode: .classic)
+game.turn(.up)
+game.turn(.right)
+check(game.queued.count == 2, "Two turns buffered")
+game.pause()
+check(game.queued.isEmpty, "Pause drops buffered input")
+game.turn(.down)
+check(game.queued.isEmpty, "Paused input ignored")
+game.resume()
+game.step()
+check(game.direction == .right, "No stale turn on resume")
+
+// Bonus critters
+random = SeededRandom(state: 99)
+game.reset(mode: .zen)
+var sawBonus = false, sawExpiry = false
+while game.apples < 10 && game.phase == .playing {
+    if let move = Autopilot.move(for: game) { game.turn(move) }
+    let step = game.step(using: &random)
+    if step.bonusSpawned {
+        sawBonus = true
+        check(game.bonus!.stepsLeft == Bonus.lifetime && game.bonus!.cell != game.food, "Bonus spawns away from the apple")
+        check(!game.snake.contains(game.bonus!.cell), "Bonus spawns in a free cell")
+    }
+    if step.bonusExpired { sawExpiry = true }
+    if step.ateBonus { check(step.bonusPoints >= 20, "Bonus pays at least 20") }
+}
+check(sawBonus && game.apples == 10, "Bonus appears every five apples")
+_ = sawExpiry
+
+// Demo autopilot survives a while on every mode
+for mode in GameMode.allCases {
+    var demo = SnakeGame()
+    var rng = SeededRandom(state: 3)
+    demo.reset(mode: mode)
+    var steps = 0
+    while demo.phase == .playing && steps < 400 {
+        if let move = Autopilot.move(for: demo) { demo.turn(move) }
+        demo.step(using: &rng)
+        steps += 1
+    }
+    check(demo.apples >= 8, "Autopilot eats on \(mode): \(demo.apples)")
+}
+
+// Follow a Hamiltonian cycle until every cell is filled, exercising growth
+// and food placement without depending on a lucky sequence of random fruit.
+random = SeededRandom(state: 12345)
+game.reset(mode: .classic)
+game.turn(.up)  // start on an even row so the cycle runs rightwards
+game.step(using: &random)
+var moves = 0
+let lastX = game.columns - 1, lastY = game.rows - 1
+while game.phase == .playing && moves < 300_000 {
+    let head = game.snake[0]
+    let next: Direction
+    if head.x == 0 { next = head.y == 0 ? .right : .up }
+    else if head.y.isMultiple(of: 2) { next = head.x == lastX ? .down : .right }
+    else if head.x > 1 { next = .left }
+    else { next = head.y == lastY ? .left : .down }
+    game.turn(next)
+    let step = game.step(using: &random)
+    if step.ateApple && game.phase == .playing {
+        check(!game.snake.contains(game.food), "Food stays outside growing body")
+    }
+    moves += 1
+}
+let cells = game.columns * game.rows
+check(game.phase == .won, "Full board wins without a spawn loop")
+check(game.snake.count == cells && Set(game.snake).count == cells, "Victory occupies each cell once")
+check(game.apples == cells - 4 && game.score >= game.apples * 10, "Full-board score")
+check(game.interval == 0.07, "Speed floor respected")
+let wonSnake = game.snake
+game.step()
+check(game.snake == wonSnake, "Win is terminal")
+
+// Progress and covers
+var stats = PlayerStats()
+check(Cover.unlocked(by: stats) == [.ember, .slate], "Two free covers")
+stats.apples = 50
+check(Cover.lime.isUnlocked(by: stats) && !Cover.gold.isUnlocked(by: stats), "Apples unlock lime")
+stats.bestScore = 250
+check(abs(Cover.gold.progress(for: stats) - 0.5) < 0.001, "Cover progress")
+stats.record(game)
+check(stats.games == 1 && stats.longest == cells && Cover.gold.isUnlocked(by: stats), "Recording a round updates stats")
+
+MainActor.assumeIsolated {
+    let suite = "iAnguis.tests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    defaults.set(70, forKey: "best.arcade")
+    let model = GameModel(defaults: defaults)
+    model.showSplash = false
+    model.select(.arcade)
+    check(model.best == 70 && model.game.mode == .arcade, "Mode selection updates preview and record")
+    let restored = GameModel(defaults: defaults)
+    check(restored.selectedMode == .arcade, "Selected mode restored")
+    model.cycleMode(1)
+    check(model.selectedMode == .maze && model.demo.mode == .maze, "Cycling modes restarts demo in that mode")
+    model.cycleMode(-2)
+    check(model.selectedMode == .classic, "Cycling backwards wraps")
+    model.tick(0)
+    for frame in 1...120 { model.tick(Double(frame) / 60) }
+    check(model.demo.snake != SnakeGame().snake || model.demo.apples > 0, "Demo plays on the menu")
+
+    var events: [GameEvent] = []
+    model.onEvent = { events.append($0) }
+    model.start(.classic)
+    model.tick(0)
+    for frame in 1...70 { model.tick(Double(frame) / 60) }
+    check(model.game.score == 10 && defaults.integer(forKey: "best.classic") == 10, "Score is stored after eating")
+    check(events.contains(.apple(combo: 1)) && !model.particles.isEmpty && !model.popups.isEmpty, "Eating fires event and effects")
+    model.pause()
+    let pausedSnake = model.game.snake
+    model.tick(500)
+    check(model.game.snake == pausedSnake, "Coordinator pause ignores elapsed time")
+    model.resume()
+    model.tick(1000)
+    check(model.game.snake == pausedSnake, "Resume does not catch up background time")
+    check(model.previousSnake == pausedSnake, "Resume interpolation starts at current position")
+    var now = 1000.0
+    while model.game.phase == .playing { now += 1.0 / 60; model.tick(now) }
+    check(model.game.phase == .over && events.contains(.died) && !model.resultVisible, "Death waits for the blink animation")
+    model.tick(now + GameModel.resultDelay + 0.01)
+    check(model.resultVisible && model.isNewRecord && events.contains(.newRecord), "Result shows after delay with record")
+    check(model.stats.games == 1 && model.stats.apples == 1, "Stats recorded once")
+    check(GameModel(defaults: defaults).stats == model.stats, "Stats persist")
+    model.menu()
+    check(model.game.phase == .ready && model.game.score == 0 && !model.resultVisible, "End round returns to fresh menu")
+    check(model.best == 10, "Returning to menu retains the played mode record")
+    model.select(.arcade)
+    check(model.best == 70, "Other mode records are preserved")
+    model.resetStats()
+    check(model.stats == PlayerStats() && model.best(for: .arcade) == 0, "Reset clears stats and records")
+    defaults.set("invalid", forKey: "selectedMode")
+    check(GameModel(defaults: defaults).selectedMode == .classic, "Invalid stored mode has safe default")
+}
+print("Passed \(checks) checks, including a complete \(moves)-move winning game")
