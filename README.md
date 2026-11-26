@@ -36,6 +36,7 @@
 - ✅ Dark mode, Light mode and System mode
 - ✅ Colour identity taken from [ividi.dev](https://ividi.dev/): burnt orange, amber and near-black
 - ✅ Automatic pause when leaving the app or opening Settings
+- ✅ Adaptive layout: keys below the screen on iPhone, beside it on an iPad held sideways
 - ✅ Up to 120 Hz on ProMotion displays, VoiceOver labels and Reduce Motion support
 - ✅ Offline play, no accounts, no ads and no analytics
 
@@ -47,7 +48,7 @@
 | UI           | SwiftUI and Canvas                              |
 | Rendering    | Custom dot-matrix raster driven by CADisplayLink |
 | Architecture | Observation + UI-free game engine               |
-| Audio        | AVAudioEngine (synthesised, no audio files)     |
+| Audio        | AVAudioEngine on its own queue (synthesised, no audio files) |
 | Haptics      | UIKit feedback generators                       |
 | Storage      | UserDefaults, on device                         |
 | Project      | XcodeGen                                        |
@@ -69,7 +70,7 @@ cd iAnguis
 open iAnguis.xcodeproj
 ```
 
-Select the `iAnguis` scheme and run with `⌘R`. For a physical device, choose your signing team under Signing & Capabilities.
+Select the `iAnguis` scheme and run with `⌘R`. For a physical device, set your own team in `DEVELOPMENT_TEAM` in `project.yml` (then `xcodegen generate`) or under Signing & Capabilities.
 
 ## 📖 Usage
 

@@ -2,7 +2,10 @@ import AVFoundation
 import QuartzCore
 import UIKit
 
-/// Piezo-style square-wave beeps, synthesised once at launch. No audio files are bundled.
+/// Piezo-style square-wave beeps, synthesised on first use. No audio files are bundled.
+///
+/// Everything touching the audio system runs on a private queue: if the system audio service is slow
+/// or stuck (a freshly booted simulator, for instance), only sound waits and the game keeps running.
 @MainActor final class SoundBoard {
     static let shared = SoundBoard()
 
@@ -10,15 +13,38 @@ import UIKit
         case eat(Int), bonus, spawn, missed, level, top, die, win, record, unlock, click, start, intro
     }
 
+    private let core = SoundCore()
+    private init() {}
+
+    func play(_ sound: Sound) {
+        guard UserDefaults.standard.bool(forKey: "sound") else { return }
+        core.play(sound)
+    }
+}
+
+private final class SoundCore: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "dev.ividi.iAnguis.audio", qos: .userInitiated)
     private let engine = AVAudioEngine()
     private var players: [AVAudioPlayerNode] = []
-    private var buffers: [Sound: AVAudioPCMBuffer] = [:]
+    private var buffers: [SoundBoard.Sound: AVAudioPCMBuffer] = [:]
     private var nextPlayer = 0
     private let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
     private var ready = false
 
-    private init() {}
+    func play(_ sound: SoundBoard.Sound) {
+        queue.async { [self] in
+            prepare()
+            if !engine.isRunning { try? engine.start() }
+            guard engine.isRunning, let buffer = buffers[sound] else { return }
+            let player = players[nextPlayer]
+            nextPlayer = (nextPlayer + 1) % players.count
+            player.stop()
+            player.scheduleBuffer(buffer, at: nil, options: .interrupts)
+            player.play()
+        }
+    }
 
+    /// Builds the graph and the buffers once, on the audio queue.
     private func prepare() {
         guard !ready else { return }
         ready = true
@@ -31,6 +57,10 @@ import UIKit
             players.append(player)
         }
         engine.mainMixerNode.outputVolume = 0.55
+        // A route change (headphones, AirPlay) stops the engine; the next sound restarts it.
+        NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil) { [weak self] _ in
+            self?.queue.async { self?.players.forEach { $0.stop() } }
+        }
         let C6 = 1046.5, E6 = 1318.5, G6 = 1568.0, C7 = 2093.0, G5 = 784.0, E5 = 659.3, D6 = 1174.7, A5 = 880.0
         for combo in 1...SnakeGame.maxCombo {
             let base = 880 * pow(1.122, Double(combo - 1))
@@ -73,18 +103,6 @@ import UIKit
             offset += count
         }
         return buffer
-    }
-
-    func play(_ sound: Sound) {
-        guard UserDefaults.standard.bool(forKey: "sound") else { return }
-        prepare()
-        if !engine.isRunning { try? engine.start() }
-        guard engine.isRunning, let buffer = buffers[sound] else { return }
-        let player = players[nextPlayer]
-        nextPlayer = (nextPlayer + 1) % players.count
-        player.stop()
-        player.scheduleBuffer(buffer, at: nil, options: .interrupts)
-        player.play()
     }
 }
 

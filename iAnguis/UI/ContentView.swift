@@ -106,8 +106,16 @@ private struct ConsoleView: View {
 
     private var largeScreen: Bool { available.width > 700 && available.height > 700 }
     private var padSize: CGFloat { min(largeScreen ? 220 : 178, max(128, available.width * 0.4, (available.height - 600) * 0.6 + 128)) }
+    /// Wide screens (an iPad on its side) put the keys beside the LCD instead of below it.
+    private var landscape: Bool { available.width > available.height * 1.15 && available.width > 700 }
     /// Width of the dot-matrix board, limited by both the width and the height of the screen.
     private var boardWidth: CGFloat {
+        if landscape {
+            let fixed: CGFloat = 26 + 46 + 18 + 40 + 30 + 36 + 34
+            let byHeight = (available.height - 16 - fixed) * BoardView.aspect
+            let byWidth = available.width - 28 - 76 - padSize - 64
+            return max(180, min(byWidth, byHeight))
+        }
         let fixed: CGFloat = 26 + 46 + 18 + 40 + 44 + 30 + 36 + 34 + padSize
         let byWidth = min(available.width - 28, largeScreen ? 660 : 500) - 76
         let byHeight = (available.height - 16 - fixed) * BoardView.aspect
@@ -116,25 +124,48 @@ private struct ConsoleView: View {
     private var phase: GamePhase { model.game.phase }
 
     var body: some View {
-        VStack(spacing: 12) {
-            topDetails
-            LCDScreen(model: model, palette: palette, boardWidth: boardWidth, smooth: smooth, reduceMotion: reduceMotion,
-                      onDirection: press, onOK: ok, onRightSoft: rightSoft)
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(LinearGradient(colors: [Color(hex: 0x1A1A1D), Color(hex: 0x2B2B30)], startPoint: .top, endPoint: .bottom))
-                        .shadow(color: .black.opacity(0.35), radius: 1, y: -1)
-                )
-                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(.white.opacity(0.08), lineWidth: 1))
-            softKeys
-            NavPad(size: padSize, style: style, centerIcon: centerIcon, centerLabel: centerLabel, onDirection: press, onCenter: ok)
-                .padding(.bottom, 4)
+        Group {
+            if landscape {
+                HStack(spacing: 28) {
+                    VStack(spacing: 12) {
+                        topDetails
+                        screen
+                    }
+                    .frame(width: boardWidth + 44)
+                    VStack(spacing: 28) {
+                        softKeys
+                        NavPad(size: padSize, style: style, centerIcon: centerIcon, centerLabel: centerLabel, onDirection: press, onCenter: ok)
+                    }
+                    .frame(width: max(padSize, 160) + 24)
+                }
+                .padding(16)
+                .padding(.horizontal, 6)
+            } else {
+                VStack(spacing: 12) {
+                    topDetails
+                    screen
+                    softKeys
+                    NavPad(size: padSize, style: style, centerIcon: centerIcon, centerLabel: centerLabel, onDirection: press, onCenter: ok)
+                        .padding(.bottom, 4)
+                }
+                .padding(16)
+                .padding(.top, 4)
+                .frame(width: boardWidth + 76)
+            }
         }
-        .padding(16)
-        .padding(.top, 4)
-        .frame(width: boardWidth + 76)
         .background(shell)
+    }
+
+    private var screen: some View {
+        LCDScreen(model: model, palette: palette, boardWidth: boardWidth, smooth: smooth, reduceMotion: reduceMotion,
+                  onDirection: press, onOK: ok, onRightSoft: rightSoft)
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(LinearGradient(colors: [Color(hex: 0x1A1A1D), Color(hex: 0x2B2B30)], startPoint: .top, endPoint: .bottom))
+                    .shadow(color: .black.opacity(0.35), radius: 1, y: -1)
+            )
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(.white.opacity(0.08), lineWidth: 1))
     }
 
     private var shell: some View {
