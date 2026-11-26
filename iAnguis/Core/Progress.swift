@@ -7,6 +7,35 @@ struct PlayerStats: Codable, Equatable {
     var bonus = 0
     var longest = 0
     var bestScore = 0
+    /// Consecutive days with a daily challenge played, and the last such day ("yyyy-MM-dd", UTC).
+    var dailyStreak = 0
+    var lastDaily = ""
+
+    init() {}
+
+    /// Tolerates saves written before a field existed, so an update never wipes progress.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        games = try c.decodeIfPresent(Int.self, forKey: .games) ?? 0
+        apples = try c.decodeIfPresent(Int.self, forKey: .apples) ?? 0
+        bonus = try c.decodeIfPresent(Int.self, forKey: .bonus) ?? 0
+        longest = try c.decodeIfPresent(Int.self, forKey: .longest) ?? 0
+        bestScore = try c.decodeIfPresent(Int.self, forKey: .bestScore) ?? 0
+        dailyStreak = try c.decodeIfPresent(Int.self, forKey: .dailyStreak) ?? 0
+        lastDaily = try c.decodeIfPresent(String.self, forKey: .lastDaily) ?? ""
+    }
+
+    /// Counts a daily challenge played on `day`, given the previous calendar day.
+    mutating func recordDaily(day: String, yesterday: String) {
+        guard lastDaily != day else { return }
+        dailyStreak = lastDaily == yesterday ? dailyStreak + 1 : 1
+        lastDaily = day
+    }
+
+    /// The streak still shown today: it lapses once a whole day is skipped.
+    func currentStreak(today: String, yesterday: String) -> Int {
+        lastDaily == today || lastDaily == yesterday ? dailyStreak : 0
+    }
 
     mutating func record(_ game: SnakeGame) {
         games += 1
@@ -18,6 +47,24 @@ struct PlayerStats: Codable, Equatable {
 }
 
 /// Swappable console covers. The first two are free; the rest are earned by playing.
+/// The calendar day of the daily challenge, in UTC so it is the same everywhere.
+enum DailyChallenge {
+    private static func formatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }
+    static func day(_ date: Date) -> String { formatter().string(from: date) }
+    static func yesterday(_ date: Date) -> String { day(date.addingTimeInterval(-86_400)) }
+    static func seed(_ date: Date) -> UInt64 {
+        let digits = UInt64(day(date).replacingOccurrences(of: "-", with: "")) ?? 0
+        return digits &* 0x2545_F491_4F6C_DD1D
+    }
+}
+
 enum Cover: String, CaseIterable, Identifiable {
     case ember, slate, lime, ice, cherry, carbon, aurora, gold
     var id: String { rawValue }

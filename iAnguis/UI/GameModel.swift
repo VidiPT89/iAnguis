@@ -40,6 +40,10 @@ struct Popup {
     @ObservationIgnored private(set) var popups: [Popup] = []
     @ObservationIgnored private(set) var overAt: Double?
     @ObservationIgnored var onEvent: ((GameEvent) -> Void)?
+    /// Called with the mode and score when a round ends, to post it to Game Center.
+    @ObservationIgnored var onRoundFinished: ((GameMode, Int) -> Void)?
+    /// Current date, replaceable in tests to move between days.
+    @ObservationIgnored var currentDate: () -> Date = Date.init
     /// Lets the demo pilot steer a real round; used for screenshots in debug builds.
     @ObservationIgnored var autopilot = false
     @ObservationIgnored private var clock = GameClock()
@@ -54,18 +58,31 @@ struct Popup {
         self.defaults = defaults
         let mode = GameMode(rawValue: defaults.string(forKey: "selectedMode") ?? "") ?? .classic
         selectedMode = mode
-        best = defaults.integer(forKey: "best.\(mode.rawValue)")
         if let data = defaults.data(forKey: "stats.v1"), let saved = try? JSONDecoder().decode(PlayerStats.self, from: data) {
             stats = saved
         } else {
             stats = PlayerStats()
         }
-        game.reset(mode: mode, start: false)
+        best = 0
+        reset(&game, mode: mode, start: false)
+        best = best(for: mode)
         previousSnake = game.snake
         restartDemo()
     }
 
-    func best(for mode: GameMode) -> Int { defaults.integer(forKey: "best.\(mode.rawValue)") }
+    /// Record key: one per mode, and one per day for the daily challenge.
+    private func bestKey(_ mode: GameMode) -> String {
+        mode == .daily ? "best.daily.\(DailyChallenge.day(currentDate()))" : "best.\(mode.rawValue)"
+    }
+    func best(for mode: GameMode) -> Int { defaults.integer(forKey: bestKey(mode)) }
+    var dailyStreak: Int {
+        let now = currentDate()
+        return stats.currentStreak(today: DailyChallenge.day(now), yesterday: DailyChallenge.yesterday(now))
+    }
+
+    private func reset(_ target: inout SnakeGame, mode: GameMode, start: Bool) {
+        target.reset(mode: mode, start: start, seed: DailyChallenge.seed(currentDate()))
+    }
 
     // MARK: Navigation
 
@@ -73,7 +90,7 @@ struct Popup {
         guard game.phase == .ready else { return }
         selectedMode = mode
         defaults.set(mode.rawValue, forKey: "selectedMode")
-        game.reset(mode: mode, start: false)
+        reset(&game, mode: mode, start: false)
         best = best(for: mode)
         restartDemo()
     }
@@ -87,7 +104,7 @@ struct Popup {
     func start(_ mode: GameMode) {
         selectedMode = mode
         defaults.set(mode.rawValue, forKey: "selectedMode")
-        game.reset(mode: mode)
+        reset(&game, mode: mode, start: true)
         previousSnake = game.snake
         progress = 1
         best = best(for: mode)
@@ -100,7 +117,7 @@ struct Popup {
     /// Back to the menu. A round abandoned from the pause screen still counts towards statistics and covers.
     func menu() {
         if game.phase == .paused { finishRound() }
-        game.reset(mode: selectedMode, start: false)
+        reset(&game, mode: selectedMode, start: false)
         best = best(for: selectedMode)
         previousSnake = game.snake
         progress = 1
@@ -123,7 +140,7 @@ struct Popup {
     }
 
     private func restartDemo() {
-        demo.reset(mode: selectedMode)
+        reset(&demo, mode: selectedMode, start: true)
         demoPrevious = demo.snake
         demoProgress = 1
         demoClock.reset()
@@ -186,7 +203,7 @@ struct Popup {
         }
         if game.score > best {
             best = game.score
-            defaults.set(best, forKey: "best.\(game.mode.rawValue)")
+            defaults.set(best, forKey: bestKey(game.mode))
         }
         if result.died || result.won {
             overAt = now
@@ -207,15 +224,20 @@ struct Popup {
     private func finishRound() {
         let before = stats
         stats.record(game)
+        if game.mode == .daily {
+            let now = currentDate()
+            stats.recordDaily(day: DailyChallenge.day(now), yesterday: DailyChallenge.yesterday(now))
+        }
         if let data = try? JSONEncoder().encode(stats) { defaults.set(data, forKey: "stats.v1") }
         newlyUnlocked = Cover.allCases.filter { !$0.isUnlocked(by: before) && $0.isUnlocked(by: stats) }
         isNewRecord = game.score > bestAtStart && game.score > 0
+        onRoundFinished?(game.mode, game.score)
     }
 
     func resetStats() {
         stats = PlayerStats()
         defaults.removeObject(forKey: "stats.v1")
-        for mode in GameMode.allCases { defaults.removeObject(forKey: "best.\(mode.rawValue)") }
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("best.") { defaults.removeObject(forKey: key) }
         best = 0
     }
 }

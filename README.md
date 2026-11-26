@@ -18,7 +18,9 @@
 - ✅ True dot-matrix LCD: every cell is drawn as 5×5 dots, with ghost pixels, glass glare and the slow fade of an old monochrome panel
 - ✅ Smooth movement that slides dot by dot, or classic cell-by-cell steps if you prefer the original feel
 - ✅ A snake with character: a three-dot body that follows every corner, an eye that blinks, a mouth that opens next to food and crossed eyes on a crash
-- ✅ Four modes: Classic (solid walls), Arcade (wrap through the edges), Maze (walls in your way) and Zen (a steady pace), each with its own record
+- ✅ Five modes: Classic (solid walls), Arcade (wrap through the edges), Maze (walls in your way), Zen (a steady pace) and the Daily Challenge, each with its own record
+- ✅ Daily Challenge: a new maze generated from the date, the same for every player that day, with its own daily record and a streak of consecutive days
+- ✅ Game Center leaderboards for every mode, plus a daily leaderboard that restarts every day
 - ✅ Combo system up to ×5 for quick catches, so every apple is a small decision
 - ✅ A bonus critter every five apples, worth more the sooner you catch it, with a countdown bar on screen and a sad beep if it escapes
 - ✅ A "TOP!" flash and jingle the moment you beat your record, then a fanfare on the result screen
@@ -38,7 +40,7 @@
 - ✅ Automatic pause when leaving the app or opening Settings
 - ✅ Adaptive layout: keys below the screen on iPhone, beside it on an iPad held sideways
 - ✅ Up to 120 Hz on ProMotion displays, VoiceOver labels and Reduce Motion support
-- ✅ Offline play, no accounts, no ads and no analytics
+- ✅ Offline play, no accounts, no ads and no analytics (Game Center is optional)
 
 ## 🛠️ Tech Stack
 
@@ -50,6 +52,7 @@
 | Architecture | Observation + UI-free game engine               |
 | Audio        | AVAudioEngine on its own queue (synthesised, no audio files) |
 | Haptics      | UIKit feedback generators                       |
+| Leaderboards | GameKit (Game Center)                           |
 | Storage      | UserDefaults, on device                         |
 | Project      | XcodeGen                                        |
 | Min. iOS     | 17.0, iPhone and iPad                           |

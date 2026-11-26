@@ -11,6 +11,7 @@ struct SplashView: View {
     static let duration = 3.4
 
     var body: some View {
+        GeometryReader { geo in
         TimelineView(.animation(paused: reduceMotion)) { _ in
             let age = reduceMotion ? 2.5 : ProcessInfo.processInfo.systemUptime - start
             ZStack {
@@ -20,7 +21,7 @@ struct SplashView: View {
                     .ignoresSafeArea()
                 VStack(spacing: 0) {
                     Spacer()
-                    logo(age: age)
+                    logo(age: age, width: min(560, max(270, min(geo.size.width, geo.size.height) * 0.5)))
                         .scaleEffect(0.86 + 0.14 * ease(min(1, age / 0.5)))
                         .opacity(min(1, age / 0.25))
                     Text(t("A cobra de bolso está de volta.", "The pocket snake is back."))
@@ -38,6 +39,7 @@ struct SplashView: View {
                 .padding(24)
             }
         }
+        }
         .contentShape(Rectangle())
         .onTapGesture(perform: onFinish)
         .task {
@@ -52,7 +54,7 @@ struct SplashView: View {
     private func ease(_ x: Double) -> Double { 1 - pow(1 - x, 3) }
     private func fade(_ age: Double, from: Double) -> Double { ease(max(0, min(1, (age - from) / 0.5))) }
 
-    private func logo(age: Double) -> some View {
+    private func logo(age: Double, width: CGFloat) -> some View {
         Canvas { context, size in
             let columns = 55, rows = 24
             let dot = size.width / CGFloat(columns)
@@ -87,7 +89,7 @@ struct SplashView: View {
             }
             context.fill(ink, with: .color(palette.ink))
         }
-        .frame(width: 270, height: 270 * 24 / 55)
+        .frame(width: width, height: width * 24 / 55)
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(LinearGradient(colors: [palette.back, palette.backDeep], startPoint: .top, endPoint: .bottom)))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.black.opacity(0.3), lineWidth: 2))

@@ -20,8 +20,21 @@ enum Direction {
     }
 }
 
+/// Small deterministic generator, so the daily challenge is the same on every device.
+struct SplitMix64: RandomNumberGenerator {
+    private var state: UInt64
+    init(seed: UInt64) { state = seed }
+    mutating func next() -> UInt64 {
+        state &+= 0x9E3779B97F4A7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
+        z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
+        return z ^ (z >> 31)
+    }
+}
+
 enum GameMode: String, CaseIterable {
-    case classic, arcade, maze, zen
+    case classic, arcade, maze, zen, daily
     /// Modes where leaving one edge brings the snake back on the opposite one.
     var wraps: Bool { self != .classic }
     var accelerates: Bool { self != .zen }
@@ -72,19 +85,27 @@ struct SnakeGame {
     /// Steps taken since the current apple appeared, and the allowance that still counts as a quick catch.
     private(set) var stepsSinceApple = 0
     private(set) var quickAllowance = 11
+    /// Seeded generator used by the daily challenge for walls and fruit; nil means system randomness.
+    private var seeded: SplitMix64?
 
     var level: Int { 1 + apples / Self.applesPerLevel }
     var interval: Double { mode.accelerates ? max(0.07, 0.2 - Double(level - 1) * 0.011) : 0.16 }
 
     init() { reset(mode: .classic, start: false) }
 
-    mutating func reset(mode: GameMode, start: Bool = true) {
+    /// Starts a round. The daily challenge needs the day's seed; other modes ignore it.
+    mutating func reset(mode: GameMode, start: Bool = true, seed: UInt64 = 0) {
         self.mode = mode
         let mid = rows / 2
         snake = [Cell(x: 7, y: mid), Cell(x: 6, y: mid), Cell(x: 5, y: mid), Cell(x: 4, y: mid)]
         direction = .right
         queued = []
-        obstacles = mode == .maze ? Self.maze(columns: columns, rows: rows) : []
+        switch mode {
+        case .maze: obstacles = Self.maze(columns: columns, rows: rows)
+        case .daily: obstacles = Self.dailyMaze(seed: seed, columns: columns, rows: rows)
+        default: obstacles = []
+        }
+        seeded = mode == .daily ? SplitMix64(seed: seed ^ 0xA5A5_5A5A) : nil
         food = Cell(x: 12, y: mid)
         bonus = nil
         score = 0
@@ -109,6 +130,44 @@ struct SnakeGame {
             for y in [mid - 3, mid - 2, mid + 2, mid + 3] { walls.insert(Cell(x: x, y: y)) }
         }
         return walls
+    }
+
+    /// Mirrored wall pieces from the day's seed, keeping the starting row open and every free cell reachable.
+    static func dailyMaze(seed: UInt64, columns: Int, rows: Int) -> Set<Cell> {
+        var random = SplitMix64(seed: seed)
+        let mid = rows / 2
+        let half = columns / 2
+        for _ in 0..<64 {
+            var walls = Set<Cell>()
+            let pieces = 4 + Int(random.next() % 3)
+            for _ in 0..<pieces {
+                let horizontal = random.next() % 2 == 0
+                let length = 2 + Int(random.next() % 4)
+                let x = 1 + Int(random.next() % UInt64(half - 1))
+                let y = 1 + Int(random.next() % UInt64(rows - 2))
+                for step in 0..<length {
+                    let cell = horizontal ? Cell(x: x + step, y: y) : Cell(x: x, y: y + step)
+                    guard cell.x < half, cell.y < rows - 1, abs(cell.y - mid) > 1 else { continue }
+                    walls.insert(cell)
+                    walls.insert(Cell(x: columns - 1 - cell.x, y: cell.y))
+                }
+            }
+            if walls.count >= 12 && allReachable(walls: walls, columns: columns, rows: rows, from: Cell(x: 7, y: mid)) { return walls }
+        }
+        return maze(columns: columns, rows: rows)
+    }
+
+    /// True when every cell that is not a wall can be reached, with wraparound edges.
+    static func allReachable(walls: Set<Cell>, columns: Int, rows: Int, from start: Cell) -> Bool {
+        var seen: Set<Cell> = [start]
+        var stack = [start]
+        while let cell = stack.popLast() {
+            for d in [Cell(x: 1, y: 0), Cell(x: -1, y: 0), Cell(x: 0, y: 1), Cell(x: 0, y: -1)] {
+                let next = Cell(x: (cell.x + d.x + columns) % columns, y: (cell.y + d.y + rows) % rows)
+                if !walls.contains(next), seen.insert(next).inserted { stack.append(next) }
+            }
+        }
+        return seen.count == columns * rows - walls.count
     }
 
     mutating func turn(_ next: Direction) {
@@ -142,6 +201,11 @@ struct SnakeGame {
 
     @discardableResult
     mutating func step() -> StepResult {
+        if var generator = seeded {
+            let result = step(using: &generator)
+            seeded = generator
+            return result
+        }
         var random = SystemRandomNumberGenerator()
         return step(using: &random)
     }

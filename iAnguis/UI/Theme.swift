@@ -112,6 +112,7 @@ extension GameMode {
         case .arcade: return "Arcade"
         case .maze: return t("Labirinto", "Maze")
         case .zen: return "Zen"
+        case .daily: return t("Desafio do dia", "Daily challenge")
         }
     }
     func blurb(_ t: Loc) -> String {
@@ -120,6 +121,7 @@ extension GameMode {
         case .arcade: return t("Atravessa as margens. Cada nível acelera.", "Wrap through the edges. Every level speeds up.")
         case .maze: return t("Muros pelo caminho. Atravessa as margens.", "Walls in your way. Wrap through the edges.")
         case .zen: return t("Sem paredes, ritmo constante. Só tu e a cobra.", "No walls, a steady pace. Just you and the snake.")
+        case .daily: return t("Um labirinto novo por dia, igual para todos.", "A new maze every day, the same for everyone.")
         }
     }
 }

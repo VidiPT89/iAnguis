@@ -27,6 +27,7 @@ struct ContentView: View {
                     SplashView(style: cover.style, palette: palette, reduceMotion: reduceMotion) {
                         guard model.showSplash else { return }
                         withAnimation(reduceMotion ? .linear(duration: 0.2) : .easeInOut(duration: 0.55)) { model.showSplash = false }
+                        GameCenter.shared.authenticate()
                     }
                     .transition(.asymmetric(insertion: .identity, removal: .opacity.combined(with: .scale(scale: 1.08))))
                     .zIndex(2)
@@ -41,6 +42,7 @@ struct ContentView: View {
         }
         .onAppear {
             model.onEvent = { Feedback.handle($0) }
+            model.onRoundFinished = { GameCenter.shared.submit(score: $1, mode: $0) }
             driver.onFrame = { [model] now in model.tick(now) }
             driver.start()
             #if DEBUG
@@ -318,6 +320,8 @@ private struct LCDScreen: View {
 
     private var game: SnakeGame { model.game }
     private var ink: Color { palette.ink }
+    /// Text and menus inside the LCD grow with the screen, so they stay readable on a 13" iPad.
+    private var scale: CGFloat { max(1, min(1.8, boardWidth / 330)) }
 
     var body: some View {
         VStack(spacing: 5) {
@@ -327,6 +331,8 @@ private struct LCDScreen: View {
                 BoardView(model: model, palette: palette, smooth: smooth, reduceMotion: reduceMotion,
                           active: !model.showSplash && !model.showSettings && game.phase != .paused && !model.resultVisible)
                 overlay
+                    .frame(width: boardWidth / scale, height: boardWidth / BoardView.aspect / scale)
+                    .scaleEffect(scale)
             }
             .frame(width: boardWidth, height: boardWidth / BoardView.aspect)
             .contentShape(Rectangle())
@@ -351,13 +357,13 @@ private struct LCDScreen: View {
 
     private var statusRow: some View {
         HStack(spacing: 6) {
-            PixelIcon(rows: PixelIcon.signal, pixel: 1.5, color: ink)
-            LCDText(game.phase == .ready ? model.selectedMode.title(t).uppercased() : game.mode.title(t).uppercased(), pixel: 1.25, color: ink)
+            PixelIcon(rows: PixelIcon.signal, pixel: 1.5 * scale, color: ink)
+            LCDText(game.phase == .ready ? model.selectedMode.title(t).uppercased() : game.mode.title(t).uppercased(), pixel: 1.25 * scale, color: ink)
             Spacer()
             if game.phase != .ready && game.mode.accelerates {
-                LCDText(t("NÍVEL \(game.level)", "LEVEL \(game.level)"), pixel: 1.25, color: ink)
+                LCDText(t("NÍVEL \(game.level)", "LEVEL \(game.level)"), pixel: 1.25 * scale, color: ink)
             }
-            PixelIcon(rows: PixelIcon.battery, pixel: 1.5, color: ink)
+            PixelIcon(rows: PixelIcon.battery, pixel: 1.5 * scale, color: ink)
         }
         .accessibilityElement(children: .combine)
     }
@@ -365,20 +371,21 @@ private struct LCDScreen: View {
     private var hud: some View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 1) {
-                LCDText(t("PONTOS", "SCORE"), pixel: 1.1, color: ink.opacity(0.75))
-                LCDText(String(format: "%04d", min(game.score, 9999)), pixel: 2.6, color: ink)
+                LCDText(t("PONTOS", "SCORE"), pixel: 1.1 * scale, color: ink.opacity(0.75))
+                LCDText(String(format: "%04d", min(game.score, 9999)), pixel: 2.6 * scale, color: ink)
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(t("Pontos", "Score")): \(game.score)")
             Spacer()
             if game.phase == .playing && game.combo >= 2 {
                 ComboBadge(combo: game.combo, ink: ink, back: palette.back)
+                    .scaleEffect(scale)
                     .transition(.scale.combined(with: .opacity))
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 1) {
-                LCDText(t("RECORDE", "BEST"), pixel: 1.1, color: ink.opacity(0.75))
-                LCDText(String(format: "%04d", min(model.best, 9999)), pixel: 2.6, color: ink)
+                LCDText(t("RECORDE", "BEST"), pixel: 1.1 * scale, color: ink.opacity(0.75))
+                LCDText(String(format: "%04d", min(model.best, 9999)), pixel: 2.6 * scale, color: ink)
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(t("Recorde", "Best")): \(model.best)")
@@ -388,15 +395,15 @@ private struct LCDScreen: View {
 
     private var footer: some View {
         HStack(spacing: 6) {
-            LCDText(t("OPÇÕES", "OPTIONS"), pixel: 1.2, color: ink)
+            LCDText(t("OPÇÕES", "OPTIONS"), pixel: 1.2 * scale, color: ink)
             Spacer()
             if let bonus = game.bonus, game.phase == .playing {
                 HStack(spacing: 4) {
-                    PixelIcon(rows: ["#.#.#", ".###.", "##.##", ".###.", "#.#.#"], pixel: 1.4, color: ink)
+                    PixelIcon(rows: ["#.#.#", ".###.", "##.##", ".###.", "#.#.#"], pixel: 1.4 * scale, color: ink)
                     HStack(spacing: 1.5) {
                         ForEach(0..<10, id: \.self) { index in
                             Rectangle().fill(ink.opacity(index < (bonus.stepsLeft * 10 + Bonus.lifetime - 1) / Bonus.lifetime ? 1 : 0.1))
-                                .frame(width: 3.5, height: 5)
+                                .frame(width: 3.5 * scale, height: 5 * scale)
                         }
                     }
                 }
@@ -404,9 +411,9 @@ private struct LCDScreen: View {
                 .accessibilityLabel(t("Bicho bónus no ecrã", "Bonus critter on screen"))
             }
             Spacer()
-            LCDText(rightLabel, pixel: 1.2, color: ink)
+            LCDText(rightLabel, pixel: 1.2 * scale, color: ink)
         }
-        .frame(height: 13)
+        .frame(height: 13 * scale)
     }
 
     private var rightLabel: String {
@@ -542,7 +549,7 @@ private struct MenuOverlay: View {
                 Spacer(minLength: 4)
                 HStack(spacing: 0) {
                     arrow("◀", t("Modo anterior", "Previous mode")) { model.cycleMode(-1) }
-                    LCDText(model.selectedMode.title(t).uppercased(), pixel: 2.4, color: palette.ink)
+                    LCDText(modeTitle, pixel: min(2.4, (geo.size.width - 110) / CGFloat(max(1, modeTitle.count * 6))), color: palette.ink)
                         .frame(maxWidth: .infinity)
                         .id(model.selectedMode)
                         .transition(.push(from: .trailing))
@@ -559,10 +566,27 @@ private struct MenuOverlay: View {
                     .frame(minHeight: 30)
                 HStack(spacing: 6) {
                     LCDText("♥", pixel: 1.4, color: palette.ink)
-                    LCDText("\(t("RECORDE", "BEST")) \(model.best(for: model.selectedMode))", pixel: 1.4, color: palette.ink)
+                    LCDText("\(model.selectedMode == .daily ? t("HOJE", "TODAY") : t("RECORDE", "BEST")) \(model.best(for: model.selectedMode))", pixel: 1.4, color: palette.ink)
+                    if model.selectedMode == .daily {
+                        LCDText("· \(t("SÉRIE", "STREAK")) \(model.dailyStreak)", pixel: 1.4, color: palette.ink)
+                    }
                 }
+                .accessibilityElement(children: .combine)
                 Spacer(minLength: 4)
-                LCDButton(title: t("JOGAR", "PLAY"), primary: true, palette: palette, blink: !reduceMotion, action: onPlay)
+                HStack(spacing: 8) {
+                    LCDButton(title: t("JOGAR", "PLAY"), primary: true, palette: palette, blink: !reduceMotion, action: onPlay)
+                    if GameCenter.shared.enabled {
+                        Button { GameCenter.shared.showLeaderboards() } label: {
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(palette.ink)
+                                .frame(width: 48, height: 44)
+                                .background(RoundedRectangle(cornerRadius: 6).strokeBorder(palette.ink, lineWidth: 2))
+                        }
+                        .buttonStyle(PressStyle())
+                        .accessibilityLabel(t("Rankings do Game Center", "Game Center leaderboards"))
+                    }
+                }
                 Text(t("Desliza no ecrã ou usa as setas", "Swipe the screen or use the arrows"))
                     .font(.system(size: 9, weight: .medium, design: .monospaced))
                     .foregroundStyle(palette.ink.opacity(0.7))
@@ -573,6 +597,8 @@ private struct MenuOverlay: View {
         }
         .background(palette.back.opacity(0.55))
     }
+
+    private var modeTitle: String { model.selectedMode.title(t).uppercased() }
 
     private func arrow(_ glyph: String, _ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {

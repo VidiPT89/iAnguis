@@ -66,6 +66,17 @@ struct SettingsView: View {
                     }
                 }
 
+                if GameCenter.shared.enabled {
+                    Section("Game Center") {
+                        Button {
+                            dismiss()
+                            Task { try? await Task.sleep(for: .milliseconds(450)); GameCenter.shared.showLeaderboards() }
+                        } label: {
+                            Label(t("Ver rankings", "View leaderboards"), systemImage: "trophy.fill")
+                        }
+                    }
+                }
+
                 Section(t("Som e vibração", "Sound and haptics")) {
                     Toggle(isOn: $sound) { Label(t("Sons retro", "Retro sounds"), systemImage: "speaker.wave.2.fill") }
                     Toggle(isOn: $haptics) { Label(t("Vibração", "Haptics"), systemImage: "iphone.radiowaves.left.and.right") }
@@ -76,8 +87,9 @@ struct SettingsView: View {
                     stat(t("Maçãs comidas", "Apples eaten"), model.stats.apples, "applelogo")
                     stat(t("Bichos bónus", "Bonus critters"), model.stats.bonus, "ant.fill")
                     stat(t("Cobra mais comprida", "Longest snake"), model.stats.longest, "ruler.fill")
+                    stat(t("Série do desafio do dia", "Daily challenge streak"), model.dailyStreak, "calendar")
                     ForEach(GameMode.allCases, id: \.self) { mode in
-                        stat("\(t("Recorde", "Best")) · \(mode.title(t))", model.best(for: mode), "trophy.fill")
+                        stat("\(mode == .daily ? t("Hoje", "Today") : t("Recorde", "Best")) · \(mode.title(t))", model.best(for: mode), "trophy.fill")
                     }
                     Button(t("Apagar estatísticas e recordes", "Reset statistics and records"), role: .destructive) { confirmReset = true }
                         .confirmationDialog(t("Apagar tudo?", "Reset everything?"), isPresented: $confirmReset, titleVisibility: .visible) {
@@ -92,6 +104,7 @@ struct SettingsView: View {
                     help("flame.fill", t("Come a maçã depressa para subir o combo até ×5. Cada maçã vale 10 × combo.", "Eat apples quickly to build a combo up to ×5. Each apple is worth 10 × combo."))
                     help("ant.fill", t("A cada 5 maçãs aparece um bicho bónus. Quanto mais cedo o apanhares, mais pontos vale.", "Every 5 apples a bonus critter appears. The sooner you catch it, the more it is worth."))
                     help("square.grid.3x3.fill", t("Clássico: paredes sólidas. Arcade: atravessa as margens. Labirinto: muros pelo caminho. Zen: ritmo constante.", "Classic: solid walls. Arcade: wrap through the edges. Maze: walls in your way. Zen: a steady pace."))
+                    help("calendar", t("Desafio do dia: um labirinto novo todos os dias, igual para todos, com ranking diário no Game Center. Joga todos os dias para aumentar a série.", "Daily challenge: a new maze every day, the same for everyone, with a daily Game Center leaderboard. Play every day to grow your streak."))
                     help("pause.fill", t("O jogo fica em pausa ao abrir as definições ou ao sair da app.", "The game pauses when you open settings or leave the app."))
                 }
 
@@ -100,6 +113,7 @@ struct SettingsView: View {
                     Text("Developed by David Arsénio Martins")
                     Link(destination: URL(string: "https://ividi.dev/")!) { Label("https://ividi.dev/", systemImage: "globe") }
                     Link(destination: URL(string: "https://github.com/VidiPT89/")!) { Label("https://github.com/VidiPT89/", systemImage: "chevron.left.forwardslash.chevron.right") }
+                    Link(destination: URL(string: "https://github.com/VidiPT89/iAnguis/blob/main/PRIVACY.md")!) { Label(t("Política de privacidade", "Privacy policy"), systemImage: "hand.raised.fill") }
                     Text(t("Os teus recordes e preferências ficam neste dispositivo. Sem contas, sem anúncios, sem recolha de dados.", "Your scores and preferences stay on this device. No accounts, no ads, no data collection."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)

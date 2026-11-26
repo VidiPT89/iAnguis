@@ -13,6 +13,7 @@
 		4791C0AAD972CB35803EE5D7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1672E2CEFA0399978FF3233A /* ContentView.swift */; };
 		4D7C783B3B8AFFA0B7EAF9CB /* iAnguisApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7DBE75E01BCD30D6BDD3161 /* iAnguisApp.swift */; };
 		5961DF56A24E279F11E27AEE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FAE5F26450B2519854EC4ED1 /* Assets.xcassets */; };
+		59D288FD22292C4BB3654662 /* GameCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2649172A2E29B4EE6F9B9C /* GameCenter.swift */; };
 		60F3FD7B1223BCAD54DDAC59 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BE441FA8A74D24F5A748737 /* Theme.swift */; };
 		64935B22386922FAADE598DD /* GameModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D14A4079138C69AAE6A5457 /* GameModel.swift */; };
 		73A19A7BB5D1DECE4D061D08 /* PixelFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB08B5889E66567F5C98518 /* PixelFont.swift */; };
@@ -27,6 +28,7 @@
 /* Begin PBXFileReference section */
 		00DB916124A5960BCD8BDF78 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		081E11CC883324718D869DFA /* Progress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Progress.swift; sourceTree = "<group>"; };
+		0B2649172A2E29B4EE6F9B9C /* GameCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenter.swift; sourceTree = "<group>"; };
 		1672E2CEFA0399978FF3233A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2D14A4079138C69AAE6A5457 /* GameModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModel.swift; sourceTree = "<group>"; };
 		3EB08B5889E66567F5C98518 /* PixelFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelFont.swift; sourceTree = "<group>"; };
@@ -35,6 +37,7 @@
 		74E2ED12D7631CB9A0F7E4A0 /* Autopilot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Autopilot.swift; sourceTree = "<group>"; };
 		8BE441FA8A74D24F5A748737 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		9C1EE110ABB549A3D1BF431F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A25968416B2AD2525A344C98 /* iAnguis.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iAnguis.entitlements; sourceTree = "<group>"; };
 		A65E845C4CD7F73F9BFB5628 /* Feedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
 		A7DBE75E01BCD30D6BDD3161 /* iAnguisApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iAnguisApp.swift; sourceTree = "<group>"; };
 		BC13A8A7535CAB2E3BFF859F /* SnakeGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnakeGame.swift; sourceTree = "<group>"; };
@@ -57,6 +60,7 @@
 			isa = PBXGroup;
 			children = (
 				FAE5F26450B2519854EC4ED1 /* Assets.xcassets */,
+				A25968416B2AD2525A344C98 /* iAnguis.entitlements */,
 				A7DBE75E01BCD30D6BDD3161 /* iAnguisApp.swift */,
 				00DB916124A5960BCD8BDF78 /* Info.plist */,
 				9C1EE110ABB549A3D1BF431F /* PrivacyInfo.xcprivacy */,
@@ -80,6 +84,7 @@
 				D37E2339E33F9658D0B85E8B /* BoardView.swift */,
 				1672E2CEFA0399978FF3233A /* ContentView.swift */,
 				A65E845C4CD7F73F9BFB5628 /* Feedback.swift */,
+				0B2649172A2E29B4EE6F9B9C /* GameCenter.swift */,
 				2D14A4079138C69AAE6A5457 /* GameModel.swift */,
 				3EB08B5889E66567F5C98518 /* PixelFont.swift */,
 				68E51052DE1FF8FE7C0831DF /* SettingsView.swift */,
@@ -175,6 +180,7 @@
 				C596AC1C3A5F13DD72E51E30 /* BoardView.swift in Sources */,
 				4791C0AAD972CB35803EE5D7 /* ContentView.swift in Sources */,
 				D16026FBC0413F2B7D1A06C6 /* Feedback.swift in Sources */,
+				59D288FD22292C4BB3654662 /* GameCenter.swift in Sources */,
 				1E9401F0F4BFF434132E65B0 /* GameClock.swift in Sources */,
 				64935B22386922FAADE598DD /* GameModel.swift in Sources */,
 				73A19A7BB5D1DECE4D061D08 /* PixelFont.swift in Sources */,
@@ -319,6 +325,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = iAnguis/iAnguis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iAnguis/Info.plist;
@@ -340,6 +347,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = iAnguis/iAnguis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iAnguis/Info.plist;

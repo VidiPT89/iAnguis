@@ -216,6 +216,48 @@ let wonSnake = game.snake
 game.step()
 check(game.snake == wonSnake, "Win is terminal")
 
+// Daily challenge: same walls and fruit for the same seed, open start row, reachable board
+let seedA = DailyChallenge.seed(Date(timeIntervalSince1970: 1_790_000_000))
+let seedB = DailyChallenge.seed(Date(timeIntervalSince1970: 1_790_000_000 + 86_400))
+var dayOne = SnakeGame(), dayOneAgain = SnakeGame(), dayTwo = SnakeGame()
+dayOne.reset(mode: .daily, seed: seedA)
+dayOneAgain.reset(mode: .daily, seed: seedA)
+dayTwo.reset(mode: .daily, seed: seedB)
+check(dayOne.obstacles == dayOneAgain.obstacles && dayOne.obstacles != dayTwo.obstacles, "Daily walls depend only on the day")
+check(dayOne.obstacles.count >= 12, "Daily maze has walls")
+check((0..<dayOne.columns).allSatisfy { !dayOne.obstacles.contains(Cell(x: $0, y: mid)) }, "Daily start row is open")
+for day in 0..<60 {
+    let walls = SnakeGame.dailyMaze(seed: DailyChallenge.seed(Date(timeIntervalSince1970: 1_790_000_000 + Double(day) * 86_400)), columns: 18, rows: 22)
+    check(SnakeGame.allReachable(walls: walls, columns: 18, rows: 22, from: Cell(x: 7, y: 11)), "Daily maze \(day) fully reachable")
+    check(walls.allSatisfy { $0.x != 7 || $0.y != 11 } && !walls.contains(Cell(x: 12, y: 11)), "Daily maze \(day) keeps start and first apple free")
+}
+var foods: [[Cell]] = []
+for _ in 0..<2 {
+    var run = SnakeGame()
+    run.reset(mode: .daily, seed: seedA)
+    var eaten: [Cell] = []
+    while run.apples < 6 && run.phase == .playing {
+        if let move = Autopilot.move(for: run) { run.turn(move) }
+        if run.step().ateApple { eaten.append(run.food) }
+    }
+    foods.append(eaten)
+}
+check(foods[0] == foods[1] && foods[0].count == 6, "Same moves give the same fruit on the same day")
+check(DailyChallenge.day(Date(timeIntervalSince1970: 0)) == "1970-01-01", "Daily key is the UTC day")
+
+var streak = PlayerStats()
+streak.recordDaily(day: "2026-11-25", yesterday: "2026-11-24")
+streak.recordDaily(day: "2026-11-25", yesterday: "2026-11-24")
+streak.recordDaily(day: "2026-11-26", yesterday: "2026-11-25")
+check(streak.dailyStreak == 2, "Streak grows once per consecutive day")
+check(streak.currentStreak(today: "2026-11-27", yesterday: "2026-11-26") == 2, "Streak alive the next day")
+check(streak.currentStreak(today: "2026-11-28", yesterday: "2026-11-27") == 0, "Streak lapses after a skipped day")
+streak.recordDaily(day: "2026-11-28", yesterday: "2026-11-27")
+check(streak.dailyStreak == 1, "Streak restarts after a gap")
+let oldSave = #"{"games":3,"apples":9,"bonus":1,"longest":12,"bestScore":90}"#.data(using: .utf8)!
+let migrated = try! JSONDecoder().decode(PlayerStats.self, from: oldSave)
+check(migrated.games == 3 && migrated.dailyStreak == 0 && migrated.lastDaily == "", "Saves without daily fields still load")
+
 // Progress and covers
 var stats = PlayerStats()
 check(Cover.allCases.filter { $0.isUnlocked(by: stats) } == [.ember, .slate], "Two free covers")
@@ -292,8 +334,30 @@ MainActor.assumeIsolated {
     model.pause()
     model.menu()
     check(model.stats.games == gamesBefore + 1 && model.stats.apples >= 3, "Quitting from pause records the round")
+    // Daily challenge records are per day and feed the streak and Game Center hook.
+    var day = Date(timeIntervalSince1970: 1_790_000_000)
+    model.currentDate = { day }
+    var posted: [(GameMode, Int)] = []
+    model.onRoundFinished = { posted.append(($0, $1)) }
+    model.menu()
+    model.select(.daily)
+    check(model.game.obstacles == SnakeGame.dailyMaze(seed: DailyChallenge.seed(day), columns: 18, rows: 22), "Daily menu shows today's maze")
+    model.start(.daily)
+    var t2 = 5000.0
+    model.tick(t2)
+    while model.game.phase == .playing && model.game.apples < 1 {
+        if let move = Autopilot.move(for: model.game) { model.turn(move) }
+        t2 += 1.0 / 60; model.tick(t2)
+    }
+    model.pause(); model.menu()
+    check(model.best(for: .daily) >= 10 && model.dailyStreak == 1, "Daily record and streak saved")
+    check(posted.last?.0 == .daily && posted.last!.1 >= 10, "Round posted for Game Center")
+    day = day.addingTimeInterval(86_400)
+    check(model.best(for: .daily) == 0 && model.dailyStreak == 1, "New day: fresh daily record, streak still alive")
     model.resetStats()
     check(model.stats == PlayerStats() && model.best(for: .arcade) == 0, "Reset clears stats and records")
+    day = day.addingTimeInterval(-86_400)
+    check(model.best(for: .daily) == 0, "Reset clears daily records")
     defaults.set("invalid", forKey: "selectedMode")
     check(GameModel(defaults: defaults).selectedMode == .classic, "Invalid stored mode has safe default")
 }
