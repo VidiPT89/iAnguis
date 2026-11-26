@@ -93,7 +93,7 @@ Run the engine checks on macOS:
 ./scripts/test.sh
 ```
 
-467 checks cover turning and input buffering, pause and resume, growth and food placement, combos, bonus critters and their expiry, mid-round records, abandoned rounds, wall, maze and body collisions, wraparound, levels and speed, the demo autopilot on every mode, cover unlocks, stored statistics and records, and the result timing. A seeded full-board game verifies victory, and clock checks compare 20, 30, 60, 120 and 144 fps.
+603 checks cover turning and input buffering, pause and resume, growth and food placement, combos, bonus critters and their expiry, mid-round records, abandoned rounds, wall, maze and body collisions, wraparound, levels and speed, the demo autopilot on every mode, cover unlocks, stored statistics and records, the daily challenge (seeded mazes, daily records and streaks) and the result timing. A seeded full-board game verifies victory, and clock checks compare 20, 30, 60, 120 and 144 fps.
 
 Build the app:
 
