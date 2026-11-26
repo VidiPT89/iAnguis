@@ -18,6 +18,8 @@ targets:
       path: iAnguis/Info.plist
       properties:
         CFBundleDisplayName: iAnguis
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, pt-PT]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CADisableMinimumFrameDurationOnPhone: true

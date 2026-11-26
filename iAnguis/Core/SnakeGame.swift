@@ -30,7 +30,7 @@ enum GameMode: String, CaseIterable {
 enum GamePhase { case ready, playing, paused, over, won }
 
 /// A short-lived critter worth more the faster it is caught. It never grows the snake.
-struct Bonus: Equatable {
+struct Bonus {
     var cell: Cell
     var stepsLeft: Int
     static let lifetime = 30

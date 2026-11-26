@@ -3,7 +3,7 @@ import Observation
 
 /// Moments the interface turns into sound, haptics and celebrations.
 enum GameEvent: Equatable {
-    case apple(combo: Int), bonus, bonusSpawned, levelUp, died, won, newRecord, unlocked
+    case apple(combo: Int), bonus, bonusSpawned, bonusMissed, levelUp, recordBroken, died, won, newRecord, unlocked
 }
 
 /// A lit LCD dot flying out of a meal, in cell units.
@@ -45,7 +45,7 @@ struct Popup {
     @ObservationIgnored private var clock = GameClock()
     @ObservationIgnored private var demoClock = GameClock()
     @ObservationIgnored private var bestAtStart = 0
-    @ObservationIgnored private var lastNow = 0.0
+    @ObservationIgnored private var celebratedRecord = false
     @ObservationIgnored private let defaults: UserDefaults
     static let demoInterval = 0.11
     static let resultDelay = 1.1
@@ -70,14 +70,12 @@ struct Popup {
     // MARK: Navigation
 
     func select(_ mode: GameMode) {
-        guard game.phase == .ready || game.phase == .over || game.phase == .won else { return }
+        guard game.phase == .ready else { return }
         selectedMode = mode
         defaults.set(mode.rawValue, forKey: "selectedMode")
-        if game.phase == .ready {
-            game.reset(mode: mode, start: false)
-            best = best(for: mode)
-            restartDemo()
-        }
+        game.reset(mode: mode, start: false)
+        best = best(for: mode)
+        restartDemo()
     }
 
     func cycleMode(_ offset: Int) {
@@ -94,11 +92,14 @@ struct Popup {
         progress = 1
         best = best(for: mode)
         bestAtStart = best
+        celebratedRecord = false
         clearRound()
         clock.reset()
     }
 
+    /// Back to the menu. A round abandoned from the pause screen still counts towards statistics and covers.
     func menu() {
+        if game.phase == .paused { finishRound() }
         game.reset(mode: selectedMode, start: false)
         best = best(for: selectedMode)
         previousSnake = game.snake
@@ -131,7 +132,6 @@ struct Popup {
     // MARK: Frame loop
 
     func tick(_ now: Double) {
-        lastNow = now
         particles.removeAll { now - $0.born > 0.7 }
         popups.removeAll { now - $0.born > 0.9 }
         switch game.phase {
@@ -177,7 +177,13 @@ struct Popup {
             onEvent?(.bonus)
         }
         if result.bonusSpawned { onEvent?(.bonusSpawned) }
+        if result.bonusExpired { onEvent?(.bonusMissed) }
         if result.levelUp { onEvent?(.levelUp) }
+        if game.score > bestAtStart, bestAtStart > 0, !celebratedRecord, !result.died {
+            celebratedRecord = true
+            popups.append(Popup(text: "TOP!", x: Double(head.x) + 0.5, y: Double(head.y) - 1.2, born: now + 0.15))
+            onEvent?(.recordBroken)
+        }
         if game.score > best {
             best = game.score
             defaults.set(best, forKey: "best.\(game.mode.rawValue)")

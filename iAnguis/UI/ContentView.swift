@@ -37,17 +37,20 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showSettings) {
             SettingsView(model: model)
-                .tint(cover.style.accent == .white ? cover.style.bottom : cover.style.top)
+                .tint(cover.style.tint)
         }
         .onAppear {
             model.onEvent = { Feedback.handle($0) }
             driver.onFrame = { [model] now in model.tick(now) }
             driver.start()
             #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-settings") { model.showSplash = false; model.showSettings = true }
-            if let mode = ProcessInfo.processInfo.arguments.firstIndex(of: "-autoplay").map({ ProcessInfo.processInfo.arguments[$0 + 1] }) {
+            // Debug-only launch arguments that bring the game to a given state for simulator screenshots.
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-settings") { model.showSplash = false; model.showSettings = true }
+            if let index = arguments.firstIndex(of: "-autoplay"), index + 1 < arguments.count {
+                let mode = arguments[index + 1]
                 model.showSplash = false
-                model.autopilot = !ProcessInfo.processInfo.arguments.contains("-crash")
+                model.autopilot = !arguments.contains("-crash")
                 model.start(GameMode(rawValue: mode) ?? .classic)
             }
             #endif
@@ -101,11 +104,12 @@ private struct ConsoleView: View {
     let reduceMotion: Bool
     @Environment(\.loc) private var t
 
-    private var padSize: CGFloat { min(178, max(128, available.width * 0.4, (available.height - 600) * 0.6 + 128)) }
+    private var largeScreen: Bool { available.width > 700 && available.height > 700 }
+    private var padSize: CGFloat { min(largeScreen ? 220 : 178, max(128, available.width * 0.4, (available.height - 600) * 0.6 + 128)) }
     /// Width of the dot-matrix board, limited by both the width and the height of the screen.
     private var boardWidth: CGFloat {
         let fixed: CGFloat = 26 + 46 + 18 + 40 + 44 + 30 + 36 + 34 + padSize
-        let byWidth = min(available.width - 28, 500) - 76
+        let byWidth = min(available.width - 28, largeScreen ? 660 : 500) - 76
         let byHeight = (available.height - 16 - fixed) * BoardView.aspect
         return max(180, min(byWidth, byHeight))
     }
@@ -290,7 +294,7 @@ private struct LCDScreen: View {
             hud
             ZStack {
                 BoardView(model: model, palette: palette, smooth: smooth, reduceMotion: reduceMotion,
-                          active: !model.showSplash && !model.showSettings)
+                          active: !model.showSplash && !model.showSettings && game.phase != .paused && !model.resultVisible)
                 overlay
             }
             .frame(width: boardWidth, height: boardWidth / BoardView.aspect)
@@ -319,7 +323,7 @@ private struct LCDScreen: View {
             PixelIcon(rows: PixelIcon.signal, pixel: 1.5, color: ink)
             LCDText(game.phase == .ready ? model.selectedMode.title(t).uppercased() : game.mode.title(t).uppercased(), pixel: 1.25, color: ink)
             Spacer()
-            if game.phase != .ready {
+            if game.phase != .ready && game.mode.accelerates {
                 LCDText(t("NÍVEL \(game.level)", "LEVEL \(game.level)"), pixel: 1.25, color: ink)
             }
             PixelIcon(rows: PixelIcon.battery, pixel: 1.5, color: ink)

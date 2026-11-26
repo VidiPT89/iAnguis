@@ -13,14 +13,21 @@ final class LCDRaster {
     private var ghostSize = CGSize.zero
     private var ghost = Path()
 
+    /// Buffers are allocated on first use: SwiftUI may build this object many times and keep only the first.
     init(width: Int, height: Int) {
         self.width = width
         self.height = height
-        level = Array(repeating: 0, count: width * height)
-        target = level
+        level = []
+        target = []
     }
 
-    func begin() { for index in target.indices { target[index] = 0 } }
+    func begin() {
+        if target.isEmpty {
+            level = Array(repeating: 0, count: width * height)
+            target = level
+        }
+        for index in target.indices { target[index] = 0 }
+    }
 
     func light(_ x: Int, _ y: Int, _ value: Float = 1) {
         guard x >= 0, y >= 0, x < width, y < height else { return }

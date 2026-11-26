@@ -7,7 +7,7 @@ import UIKit
     static let shared = SoundBoard()
 
     enum Sound: Hashable {
-        case eat(Int), bonus, spawn, level, die, win, record, unlock, click, start, intro
+        case eat(Int), bonus, spawn, missed, level, top, die, win, record, unlock, click, start, intro
     }
 
     private let engine = AVAudioEngine()
@@ -38,6 +38,8 @@ import UIKit
         }
         buffers[.bonus] = render([(C6, 0.045), (E6, 0.045), (G6, 0.045), (C7, 0.09)])
         buffers[.spawn] = render([(G6, 0.03), (0, 0.04), (G6, 0.03)])
+        buffers[.missed] = render([(392, 0.06), (311, 0.12)], volume: 0.7)
+        buffers[.top] = render([(G6, 0.05), (C7, 0.05), (G6, 0.05), (C7, 0.12)])
         buffers[.level] = render([(G5, 0.06), (C6, 0.06), (E6, 0.06), (G6, 0.12)])
         buffers[.die] = render([(G5, 0.09), (622, 0.09), (494, 0.09), (392, 0.1), (330, 0.28)])
         buffers[.win] = render([(C6, 0.08), (E6, 0.08), (G6, 0.08), (C7, 0.08), (G6, 0.08), (C7, 0.3)])
@@ -106,6 +108,8 @@ import UIKit
         case .apple(let combo): SoundBoard.shared.play(.eat(combo)); Haptics.eat(combo)
         case .bonus: SoundBoard.shared.play(.bonus); Haptics.success()
         case .bonusSpawned: SoundBoard.shared.play(.spawn)
+        case .bonusMissed: SoundBoard.shared.play(.missed)
+        case .recordBroken: SoundBoard.shared.play(.top); Haptics.success()
         case .levelUp: SoundBoard.shared.play(.level)
         case .died: SoundBoard.shared.play(.die); Haptics.crash()
         case .won: SoundBoard.shared.play(.win); Haptics.success()

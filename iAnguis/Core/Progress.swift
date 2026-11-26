@@ -22,7 +22,7 @@ enum Cover: String, CaseIterable, Identifiable {
     case ember, slate, lime, ice, cherry, carbon, aurora, gold
     var id: String { rawValue }
 
-    enum Requirement: Equatable {
+    enum Requirement {
         case free, apples(Int), games(Int), score(Int), longest(Int), bonus(Int)
     }
 
@@ -60,6 +60,4 @@ enum Cover: String, CaseIterable, Identifiable {
         case .bonus(let n): return min(1, Double(stats.bonus) / Double(n))
         }
     }
-
-    static func unlocked(by stats: PlayerStats) -> [Cover] { allCases.filter { $0.isUnlocked(by: stats) } }
 }

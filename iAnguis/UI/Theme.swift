@@ -60,19 +60,21 @@ struct CoverStyle {
     var keySymbol: Color
     var accent: Color
     var label: Color
+    /// Accent for system controls in Settings, readable in light and dark appearance.
+    var tint: Color
 }
 
 extension Cover {
     var style: CoverStyle {
         switch self {
-        case .ember: return CoverStyle(top: Color(hex: 0xF07A2B), bottom: Color(hex: 0xC4500F), key: Color(hex: 0x1C1714), keySymbol: Color(hex: 0xFFD08A), accent: Color(hex: 0xFFC247), label: Color(hex: 0x2A1405))
-        case .slate: return CoverStyle(top: Color(hex: 0x52677E), bottom: Color(hex: 0x2E3D50), key: Color(hex: 0x1A2330), keySymbol: Color(hex: 0xD8E4F0), accent: Color(hex: 0xFF6B52), label: Color(hex: 0xE4ECF5))
-        case .lime: return CoverStyle(top: Color(hex: 0xA6D23F), bottom: Color(hex: 0x6E9E1E), key: Color(hex: 0x1F3311), keySymbol: Color(hex: 0xE9FFB8), accent: Color(hex: 0xFFE14D), label: Color(hex: 0x1B2D0B))
-        case .ice: return CoverStyle(top: Color(hex: 0xE3EEF6), bottom: Color(hex: 0xA9C3D9), key: Color(hex: 0x34495E), keySymbol: Color(hex: 0xEAF6FF), accent: Color(hex: 0x2BB3E8), label: Color(hex: 0x22374B))
-        case .cherry: return CoverStyle(top: Color(hex: 0xE33049), bottom: Color(hex: 0x9C0E26), key: Color(hex: 0x2B0710), keySymbol: Color(hex: 0xFFC2CC), accent: Color(hex: 0xFFD3DA), label: Color(hex: 0xFFE6EA))
-        case .carbon: return CoverStyle(top: Color(hex: 0x34363B), bottom: Color(hex: 0x101114), key: Color(hex: 0x45484F), keySymbol: Color(hex: 0xF2F2F2), accent: Color(hex: 0xFF8A2A), label: Color(hex: 0xC9CDD4))
-        case .aurora: return CoverStyle(top: Color(hex: 0x7A45D8), bottom: Color(hex: 0x1F9AA3), key: Color(hex: 0x1A1033), keySymbol: Color(hex: 0xD9FFF4), accent: Color(hex: 0x6CFFD2), label: Color(hex: 0xF1EBFF))
-        case .gold: return CoverStyle(top: Color(hex: 0xF5D27A), bottom: Color(hex: 0xB9862A), key: Color(hex: 0x3B2808), keySymbol: Color(hex: 0xFFF1C9), accent: Color(hex: 0xFFFFFF), label: Color(hex: 0x3B2808))
+        case .ember: return CoverStyle(top: Color(hex: 0xF07A2B), bottom: Color(hex: 0xC4500F), key: Color(hex: 0x1C1714), keySymbol: Color(hex: 0xFFD08A), accent: Color(hex: 0xFFC247), label: Color(hex: 0x2A1405), tint: Color(hex: 0xE8701F))
+        case .slate: return CoverStyle(top: Color(hex: 0x52677E), bottom: Color(hex: 0x2E3D50), key: Color(hex: 0x1A2330), keySymbol: Color(hex: 0xD8E4F0), accent: Color(hex: 0xFF6B52), label: Color(hex: 0xE4ECF5), tint: Color(hex: 0x5C7A99))
+        case .lime: return CoverStyle(top: Color(hex: 0xA6D23F), bottom: Color(hex: 0x6E9E1E), key: Color(hex: 0x1F3311), keySymbol: Color(hex: 0xE9FFB8), accent: Color(hex: 0xFFE14D), label: Color(hex: 0x1B2D0B), tint: Color(hex: 0x6FA521))
+        case .ice: return CoverStyle(top: Color(hex: 0xE3EEF6), bottom: Color(hex: 0xA9C3D9), key: Color(hex: 0x34495E), keySymbol: Color(hex: 0xEAF6FF), accent: Color(hex: 0x2BB3E8), label: Color(hex: 0x22374B), tint: Color(hex: 0x2BA3D6))
+        case .cherry: return CoverStyle(top: Color(hex: 0xE33049), bottom: Color(hex: 0x9C0E26), key: Color(hex: 0x2B0710), keySymbol: Color(hex: 0xFFC2CC), accent: Color(hex: 0xFFD3DA), label: Color(hex: 0xFFE6EA), tint: Color(hex: 0xD92A44))
+        case .carbon: return CoverStyle(top: Color(hex: 0x34363B), bottom: Color(hex: 0x101114), key: Color(hex: 0x45484F), keySymbol: Color(hex: 0xF2F2F2), accent: Color(hex: 0xFF8A2A), label: Color(hex: 0xC9CDD4), tint: Color(hex: 0xF07E22))
+        case .aurora: return CoverStyle(top: Color(hex: 0x7A45D8), bottom: Color(hex: 0x1F9AA3), key: Color(hex: 0x1A1033), keySymbol: Color(hex: 0xD9FFF4), accent: Color(hex: 0x6CFFD2), label: Color(hex: 0xF1EBFF), tint: Color(hex: 0x8C5BE6))
+        case .gold: return CoverStyle(top: Color(hex: 0xF5D27A), bottom: Color(hex: 0xB9862A), key: Color(hex: 0x3B2808), keySymbol: Color(hex: 0xFFF1C9), accent: Color(hex: 0xFFFFFF), label: Color(hex: 0x3B2808), tint: Color(hex: 0xC28E25))
         }
     }
 

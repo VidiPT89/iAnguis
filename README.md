@@ -20,7 +20,8 @@
 - ✅ A snake with character: a three-dot body that follows every corner, an eye that blinks, a mouth that opens next to food and crossed eyes on a crash
 - ✅ Four modes: Classic (solid walls), Arcade (wrap through the edges), Maze (walls in your way) and Zen (a steady pace), each with its own record
 - ✅ Combo system up to ×5 for quick catches, so every apple is a small decision
-- ✅ A bonus critter every five apples, worth more the sooner you catch it, with a countdown bar on screen
+- ✅ A bonus critter every five apples, worth more the sooner you catch it, with a countdown bar on screen and a sad beep if it escapes
+- ✅ A "TOP!" flash and jingle the moment you beat your record, then a fanfare on the result screen
 - ✅ Speed rises every five apples, with a level-up jingle
 - ✅ Attract mode: a demo snake plays the selected mode behind the menu
 - ✅ Eight swappable console covers, two free and six earned by playing (apples eaten, rounds, best score, length and bonus critters)
@@ -88,7 +89,7 @@ Run the engine checks on macOS:
 ./scripts/test.sh
 ```
 
-460 checks cover turning and input buffering, pause and resume, growth and food placement, combos, bonus critters, wall, maze and body collisions, wraparound, levels and speed, the demo autopilot on every mode, cover unlocks, stored statistics and records, and the result timing. A seeded full-board game verifies victory, and clock checks compare 20, 30, 60, 120 and 144 fps.
+467 checks cover turning and input buffering, pause and resume, growth and food placement, combos, bonus critters and their expiry, mid-round records, abandoned rounds, wall, maze and body collisions, wraparound, levels and speed, the demo autopilot on every mode, cover unlocks, stored statistics and records, and the result timing. A seeded full-board game verifies victory, and clock checks compare 20, 30, 60, 120 and 144 fps.
 
 Build the app:
 

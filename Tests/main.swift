@@ -137,7 +137,7 @@ check(game.direction == .right, "No stale turn on resume")
 // Bonus critters
 random = SeededRandom(state: 99)
 game.reset(mode: .zen)
-var sawBonus = false, sawExpiry = false
+var sawBonus = false
 while game.apples < 10 && game.phase == .playing {
     if let move = Autopilot.move(for: game) { game.turn(move) }
     let step = game.step(using: &random)
@@ -146,11 +146,30 @@ while game.apples < 10 && game.phase == .playing {
         check(game.bonus!.stepsLeft == Bonus.lifetime && game.bonus!.cell != game.food, "Bonus spawns away from the apple")
         check(!game.snake.contains(game.bonus!.cell), "Bonus spawns in a free cell")
     }
-    if step.bonusExpired { sawExpiry = true }
     if step.ateBonus { check(step.bonusPoints >= 20, "Bonus pays at least 20") }
 }
 check(sawBonus && game.apples == 10, "Bonus appears every five apples")
-_ = sawExpiry
+
+// A bonus that is never caught runs out after exactly its lifetime
+var expiryChecked = false
+for seed in UInt64(1)...40 where !expiryChecked {
+    var rng = SeededRandom(state: seed)
+    game.reset(mode: .zen)
+    var stepsSinceSpawn = -1
+    while game.phase == .playing && game.apples < 30 {
+        if let move = Autopilot.move(for: game) { game.turn(move) }
+        let step = game.step(using: &rng)
+        if step.bonusSpawned { stepsSinceSpawn = 0; continue }
+        if stepsSinceSpawn >= 0 { stepsSinceSpawn += 1 }
+        if step.ateBonus { stepsSinceSpawn = -1 }
+        if step.bonusExpired {
+            check(stepsSinceSpawn == Bonus.lifetime, "Uncaught bonus expires after its lifetime: \(stepsSinceSpawn)")
+            expiryChecked = true
+            break
+        }
+    }
+}
+check(expiryChecked, "Found an uncaught bonus to check expiry")
 
 // Demo autopilot survives a while on every mode
 for mode in GameMode.allCases {
@@ -199,7 +218,7 @@ check(game.snake == wonSnake, "Win is terminal")
 
 // Progress and covers
 var stats = PlayerStats()
-check(Cover.unlocked(by: stats) == [.ember, .slate], "Two free covers")
+check(Cover.allCases.filter { $0.isUnlocked(by: stats) } == [.ember, .slate], "Two free covers")
 stats.apples = 50
 check(Cover.lime.isUnlocked(by: stats) && !Cover.gold.isUnlocked(by: stats), "Apples unlock lime")
 stats.bestScore = 250
@@ -248,11 +267,31 @@ MainActor.assumeIsolated {
     check(model.resultVisible && model.isNewRecord && events.contains(.newRecord), "Result shows after delay with record")
     check(model.stats.games == 1 && model.stats.apples == 1, "Stats recorded once")
     check(GameModel(defaults: defaults).stats == model.stats, "Stats persist")
+    model.select(.zen)
+    check(model.selectedMode == .classic, "Mode cannot change on the result screen")
     model.menu()
     check(model.game.phase == .ready && model.game.score == 0 && !model.resultVisible, "End round returns to fresh menu")
     check(model.best == 10, "Returning to menu retains the played mode record")
     model.select(.arcade)
     check(model.best == 70, "Other mode records are preserved")
+    // Beating a record mid-round is celebrated once; quitting from pause still counts the round.
+    events = []
+    model.start(.classic)
+    model.tick(2000)
+    var clockTime = 2000.0
+    for _ in 0..<70 { clockTime += 1.0 / 60; model.tick(clockTime) }
+    check(model.game.score == 10 && !events.contains(.recordBroken), "Equalling the record is not a new record")
+    while model.game.apples < 2 && model.game.phase == .playing {
+        if let move = Autopilot.move(for: model.game) { model.turn(move) }
+        clockTime += 1.0 / 60
+        model.tick(clockTime)
+    }
+    check(events.filter { $0 == .recordBroken }.count == 1, "Record broken once")
+    check(model.popups.contains { $0.text == "TOP!" }, "Record popup shown")
+    let gamesBefore = model.stats.games
+    model.pause()
+    model.menu()
+    check(model.stats.games == gamesBefore + 1 && model.stats.apples >= 3, "Quitting from pause records the round")
     model.resetStats()
     check(model.stats == PlayerStats() && model.best(for: .arcade) == 0, "Reset clears stats and records")
     defaults.set("invalid", forKey: "selectedMode")
